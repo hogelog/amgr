@@ -13,31 +13,77 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  preview:
+  deploy-preview:
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        if: github.event.action != 'closed'
 
       - uses: actions/setup-node@v4
-        if: github.event.action != 'closed'
         with:
           node-version: 22
           cache: pnpm
 
-      - if: github.event.action != 'closed'
-        run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
-      - if: github.event.action != 'closed'
-        run: pnpm build
+      - run: pnpm build
         env:
           VITE_BASE: /aimanager/pr-preview/pr-${{ github.event.pull_request.number }}/
 
-      - uses: rossjrw/pr-preview-action@v1
-        with:
-          source-dir: dist
-          preview-branch: gh-pages
-          umbrella-dir: pr-preview
-          action: auto
+      - name: Deploy preview to gh-pages
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages:gh-pages || git checkout --orphan gh-pages
+          git checkout gh-pages
+          mkdir -p "pr-preview/pr-${PR_NUMBER}"
+          rm -rf "pr-preview/pr-${PR_NUMBER}/"*
+          cp -r dist/* "pr-preview/pr-${PR_NUMBER}/"
+          git add "pr-preview/pr-${PR_NUMBER}"
+          git commit -m "Deploy preview for PR #${PR_NUMBER}" --allow-empty
+          git push origin gh-pages
+
+      - name: Comment preview URL
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PREVIEW_URL="https://hogelog.github.io/aimanager/pr-preview/pr-${PR_NUMBER}/"
+          COMMENT_TAG="<!-- pr-preview -->"
+          BODY="${COMMENT_TAG}
+          **Preview:** ${PREVIEW_URL}"
+
+          existing=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            --jq ".[] | select(.body | startswith(\"${COMMENT_TAG}\")) | .id" | head -1)
+
+          if [ -n "$existing" ]; then
+            gh api "repos/${{ github.repository }}/issues/comments/${existing}" \
+              -X PATCH -f body="${BODY}"
+          else
+            gh pr comment "${PR_NUMBER}" --body "${BODY}"
+          fi
+
+  cleanup-preview:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Remove preview from gh-pages
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages:gh-pages || exit 0
+          git checkout gh-pages
+          if [ -d "pr-preview/pr-${PR_NUMBER}" ]; then
+            git rm -rf "pr-preview/pr-${PR_NUMBER}"
+            git commit -m "Remove preview for PR #${PR_NUMBER}"
+            git push origin gh-pages
+          fi

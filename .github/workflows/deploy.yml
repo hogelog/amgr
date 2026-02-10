@@ -29,8 +29,23 @@ jobs:
 
       - run: pnpm build
 
-      - uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          branch: gh-pages
-          folder: dist
-          clean-exclude: pr-preview
+      - name: Deploy to gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git fetch origin gh-pages:gh-pages 2>/dev/null; then
+            git checkout gh-pages
+            # Remove everything except pr-preview and .git
+            find . -maxdepth 1 ! -name '.' ! -name '.git' ! -name 'pr-preview' -exec rm -rf {} +
+          else
+            git checkout --orphan gh-pages
+            git rm -rf .
+          fi
+
+          cp -r dist/* .
+          git add -A
+          git diff --cached --quiet || {
+            git commit -m "Deploy from ${GITHUB_SHA::7}"
+            git push origin gh-pages
+          }
