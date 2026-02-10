@@ -6,7 +6,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages-deploy
@@ -15,6 +17,9 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -29,23 +34,11 @@ jobs:
 
       - run: pnpm build
 
-      - name: Deploy to gh-pages
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - uses: actions/configure-pages@v5
 
-          if git fetch origin gh-pages:gh-pages 2>/dev/null; then
-            git checkout gh-pages
-            # Remove everything except pr-preview and .git
-            find . -maxdepth 1 ! -name '.' ! -name '.git' ! -name 'pr-preview' -exec rm -rf {} +
-          else
-            git checkout --orphan gh-pages
-            git rm -rf .
-          fi
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
 
-          cp -r dist/* .
-          git add -A
-          git diff --cached --quiet || {
-            git commit -m "Deploy from ${GITHUB_SHA::7}"
-            git push origin gh-pages
-          }
+      - id: deployment
+        uses: actions/deploy-pages@v4
