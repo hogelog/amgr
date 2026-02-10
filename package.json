@@ -1,5 +1,6 @@
 {
   "name": "aimanager",
+  "packageManager": "pnpm@10.29.1",
   "private": true,
   "version": "0.0.0",
   "type": "module",
