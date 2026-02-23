@@ -5,14 +5,12 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 
 app.innerHTML = `
   <h1>Browser LLM</h1>
-  <button id="init">Initialize Model</button>
   <div id="status"></div>
   <textarea id="prompt" placeholder="Enter your prompt here..." rows="4" style="width: 100%; margin-top: 10px;"></textarea>
   <button id="generate" disabled>Generate</button>
   <pre id="output" style="white-space: pre-wrap; margin-top: 10px;"></pre>
 `;
 
-const initButton = document.querySelector<HTMLButtonElement>("#init")!;
 const generateButton = document.querySelector<HTMLButtonElement>("#generate")!;
 const statusDiv = document.querySelector<HTMLDivElement>("#status")!;
 const promptTextarea = document.querySelector<HTMLTextAreaElement>("#prompt")!;
@@ -20,8 +18,7 @@ const outputPre = document.querySelector<HTMLPreElement>("#output")!;
 
 let engine: webllm.MLCEngine | null = null;
 
-initButton.addEventListener("click", async () => {
-  initButton.disabled = true;
+async function initModel() {
   statusDiv.textContent = "Loading model...";
 
   try {
@@ -34,9 +31,10 @@ initButton.addEventListener("click", async () => {
     generateButton.disabled = false;
   } catch (err) {
     statusDiv.textContent = `Error: ${err}`;
-    initButton.disabled = false;
   }
-});
+}
+
+initModel();
 
 generateButton.addEventListener("click", async () => {
   if (!engine) return;
