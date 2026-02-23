@@ -1,1 +1,1 @@
-# aimanager
+# amgr
