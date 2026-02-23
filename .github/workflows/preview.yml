@@ -18,20 +18,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        if: github.event.action != 'closed'
-
       - uses: actions/setup-node@v4
         if: github.event.action != 'closed'
         with:
           node-version: 22
-          cache: pnpm
+          cache: npm
 
       - if: github.event.action != 'closed'
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - if: github.event.action != 'closed'
-        run: pnpm build
+        run: npm run build
         env:
           VITE_BASE: /aimanager/pr-preview/pr-${{ github.event.pull_request.number }}/
 
