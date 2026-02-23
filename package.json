@@ -9,6 +9,9 @@
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
+  "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.72"
+  },
   "devDependencies": {
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
